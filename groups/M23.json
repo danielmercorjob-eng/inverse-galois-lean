@@ -1,0 +1,33 @@
+{
+  "name": "M23",
+  "latex": "M_{23}",
+  "description": "the Mathieu group $M_{23}$ in its natural action on $23$ points",
+  "degree": 23,
+  "order": 10200960,
+  "generators": [
+    [[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]],
+    [[3, 17, 10, 7, 9], [4, 13, 14, 19, 5], [8, 18, 11, 12, 23], [15, 20, 22, 21, 16]]
+  ],
+  "identification": "$M_{23}$ is the only transitive group of degree $23$ of that order.",
+  "status": {
+    "realizable": "solved",
+    "regular": "open"
+  },
+  "known_polynomials": [
+    {
+      "digits": 100,
+      "root_action": true,
+      "source": "of Huang et al. (reported by Epoch AI)"
+    }
+  ],
+  "notes": {
+    "realizable": "Epoch AI reports that Huang et al. found a degree-23 polynomial over $\\mathbb{Q}$ with Galois group $M_{23}$ whose coefficients have fewer than $100$ digits.",
+    "regular": "It is not known whether $M_{23}$ is a regular Galois group over $\\mathbb{Q}(t)$."
+  },
+  "references": [
+    {
+      "title": "Epoch AI, FrontierMath Open Problems: Inverse Galois problem for M23",
+      "url": "https://epoch.ai/frontiermath/open-problems/inverse-galois"
+    }
+  ]
+}

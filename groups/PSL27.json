@@ -1,0 +1,30 @@
+{
+  "name": "PSL27",
+  "latex": "\\mathrm{PSL}(2, 7)",
+  "description": "the simple group $\\mathrm{PSL}(2, 7) \\cong \\mathrm{GL}(3, 2)$, acting on the $7$ points of the Fano plane",
+  "degree": 7,
+  "order": 168,
+  "generators": [
+    [[1, 2, 3, 4, 5, 6, 7]],
+    [[3, 5], [6, 7]]
+  ],
+  "identification": "$\\mathrm{PSL}(2, 7)$ is the only transitive group of degree $7$ of that order.",
+  "status": {
+    "realizable": "solved"
+  },
+  "known_polynomials": [
+    {
+      "coefficients": [3, -7, 0, 0, 0, 0, 0, 1],
+      "root_action": true,
+      "source": "$x^7 - 7x + 3$ (Trinks)"
+    }
+  ],
+  "notes": {
+    "realizable": "The polynomial $x^7 - 7x + 3$ has Galois group $\\mathrm{PSL}(2, 7)$ over $\\mathbb{Q}$ (Trinks; Erbach, Fischer and McKay)."
+  },
+  "references": [
+    {
+      "title": "D. W. Erbach, J. Fischer and J. McKay, Polynomials with PSL(2,7) as Galois group, J. Number Theory 11 (1979)"
+    }
+  ]
+}

@@ -1,19 +1,25 @@
-# inverse-galois-m23
+# inverse-galois-lean
 
-A Python generator for Lean 4 variants of the
-[Epoch AI FrontierMath open problem on the inverse Galois problem for M₂₃](https://epoch.ai/frontiermath/open-problems/inverse-galois):
+A Python generator for Lean 4 variants of the **inverse Galois problem** for finite
+permutation groups. The output is in the format of
+[Formal Conjectures](https://github.com/google-deepmind/formal-conjectures).
+
+It started from the
+[Epoch AI FrontierMath open problem for M₂₃](https://epoch.ai/frontiermath/open-problems/inverse-galois):
 
 > Find a degree 23 polynomial with integer coefficients, each with fewer than 100 decimal
 > digits, whose splitting field over ℚ has Galois group M₂₃.
 
-The generator writes problem files into a local clone of
-[Formal Conjectures](https://github.com/google-deepmind/formal-conjectures), where they are
-built with Formal Conjectures' own toolchain, Mathlib and linters. Each generated file:
+Groups are data. Each group is a JSON file in [`groups/`](groups). The repository includes
+M₂₃ and PSL(2, 7).
+
+The generator writes problem files into a local Formal Conjectures clone, under
+`FormalConjectures/InverseGalois/<Group>/`. Each generated file:
 
 - follows the Formal Conjectures file template (copyright header, `module`,
-  `public import FormalConjecturesUtil`, module docstring with reference);
-- is self-contained: it defines M₂₃ and has its own namespace,
-  `InverseGaloisM23.<FileName>`;
+  `public import FormalConjecturesUtil`, module docstring with references);
+- is self-contained: it defines the group as a subgroup of `Equiv.Perm (Fin n)` and has its own
+  namespace, `InverseGaloisVariants.<Group><Variant>`;
 - has **exactly one `sorry`**: the proof of its main theorem. The `@[category test]` checks of
   the generators are proved by `decide`.
 
@@ -22,67 +28,93 @@ built with Formal Conjectures' own toolchain, Mathlib and linters. Each generate
 Requires Python 3.9+ and nothing else.
 
 ```bash
-./generate.py --list          # show the variants and their status; write nothing
-./generate.py                 # write the 38 default variants
-cd ~/formal-conjectures
-lake --wfail build FormalConjectures.Other.InverseGaloisM23.PolyGalIsoDigits100
+./generate.py --list                    # show the variants and their status; write nothing
+./generate.py                           # all groups, default variants
+./generate.py --groups M23 --digits 100 50 none
+cd ~/formal-conjectures && lake build   # builds the new files; everything else is cached
 ```
-
-By default, files go to `~/formal-conjectures/FormalConjectures/Other/InverseGaloisM23/`.
-Formal Conjectures has no Epoch AI source folder, so `Other` is the documented place.
 
 | Option | Meaning |
 |---|---|
 | `--fc-root PATH` | Formal Conjectures checkout (default `~/formal-conjectures`) |
-| `--subdir DIR` | output directory inside it |
+| `--subdir DIR` | output directory inside it (default `FormalConjectures/InverseGalois`) |
+| `--groups G …` | groups to use (default: every file in `groups/`) |
+| `--groups-dir DIR` | where to read group files from |
 | `--actions abstract roots` | how the Galois group is stated (see below) |
 | `--normalizations any monic monic_irreducible` | conditions on $f$ |
-| `--digits 100 50 none` | coefficients have fewer than $N$ decimal digits; `none` for no bound |
-| `--real-roots none 23 7` | exact number of real roots |
+| `--digits N … none` | coefficients have fewer than $N$ decimal digits; `none` for no bound |
+| `--real-roots k … none` | exact number of real roots |
 | `--no-realizable`, `--no-regular` | skip the two field-theoretic variants |
-| `--clean` | delete previously generated files first (hand-written files are kept) |
+| `--skip-unknown` | only generate variants whose status the group file settles |
+| `--clean` | delete previously generated files of the selected groups first (hand-written files are kept) |
 | `--build` | run `lake --wfail build` on the generated modules |
-| `--skip-group-check` | skip the Schreier–Sims check of the generators |
 
 ## Variants
 
-Polynomial variants are the product of these axes, plus two standalone variants:
+For a group $G \le S_n$, polynomial variants are the product of these axes:
 
 - **Galois group (`--actions`)**
-  - `abstract`: `Nonempty ((f.map (Int.castRingHom ℚ)).Gal ≃* M23)`.
-  - `roots`: for some bijection between the complex roots and `Fin 23`, the image of the
-    Galois action is exactly `M23 ≤ Equiv.Perm (Fin 23)`.
-- **Normalization:** any polynomial, monic, or monic and irreducible over ℚ.
-- **Digit bound:** `(Nat.digits 10 (f.coeff i).natAbs).length < N` for all `i`.
-- **Real roots:** complex conjugation acts as an involution in M₂₃. These all have cycle type
-  1⁷2⁸, so only 23 or 7 real roots are possible. Other counts are rejected.
-- **`Realizable`:** a finite Galois extension of ℚ has Galois group M₂₃.
-- **`RegularOverRatFunc`:** M₂₃ is a regular Galois group over ℚ(t).
+  - `abstract`: `Nonempty ((f.map (Int.castRingHom ℚ)).Gal ≃* G)`.
+  - `roots`: for some bijection between the complex roots and `Fin n`, the image of the
+    Galois action is exactly `G ≤ Equiv.Perm (Fin n)`.
+- **Normalization:** any polynomial, monic, or monic and irreducible. The irreducible option is
+  skipped for intransitive groups, where it is false.
+- **Digit bound:** `(Nat.digits 10 (f.coeff i).natAbs).length < N` for all `i`. The default
+  bounds are those of the group's known polynomials, plus no bound.
+- **Real roots:** complex conjugation acts on the roots as the identity or as an involution of
+  $G$. So the possible counts are $n$ and the fixed-point counts of involutions. The generator
+  computes these by random sampling and rejects other counts.
+
+There are also two standalone variants:
+
+- **`Realizable`:** a finite Galois extension of ℚ has Galois group $G$.
+- **`RegularOverRatFunc`:** $G$ is a regular Galois group over ℚ(t).
 
 ### Status
 
-The `category` attribute is assigned conservatively:
+Each variant gets one of three statuses:
 
-- `research solved`: the variant follows from the Epoch AI result (Huang et al.) by an
-  elementary argument. These are the variants with no real-root condition and either a digit
-  bound ≥ 100 with no normalization, or no digit bound. `Realizable` is also solved.
-- `research open`: everything else. This includes variants that may be settled by the known
-  polynomial but are not recorded as such, such as its number of real roots.
+- **`solved`**: it follows from the group file by an elementary argument. Either a known
+  polynomial satisfies all its conditions, or it has no digit bound and no real-root
+  condition and $G$ is realizable over ℚ. In that case scaling gives a monic polynomial, and a
+  transitive Galois group makes it irreducible.
+- **`open`**: the group file records it as open. Every polynomial variant is open when
+  realizability is open.
+- **`unknown`**: the group file does not settle it. These files get
+  `@[category research open]` and say so in their docstring. Use `--skip-unknown` to omit them.
 
-## M₂₃
+## Group files
 
-M₂₃ is the subgroup of `Equiv.Perm (Fin 23)` generated by
-`(1 2 … 23)` and `(3 17 10 7 9)(4 13 14 19 5)(8 18 11 12 23)(15 20 22 21 16)`.
-[`igm23/group.py`](igm23/group.py) checks with Schreier–Sims that this group is transitive of
-order 10 200 960. M₂₃ is the only transitive group of degree 23 with that order.
-`generate.py` runs this check before writing files.
+```jsonc
+{
+  "name": "PSL27",                        // Lean identifier, folder name
+  "latex": "\\mathrm{PSL}(2, 7)",
+  "description": "the simple group ... acting on the $7$ points of the Fano plane",
+  "degree": 7,
+  "order": 168,                           // checked by Schreier–Sims
+  "generators": [[[1, 2, 3, 4, 5, 6, 7]], [[3, 5], [6, 7]]],   // 1-indexed cycles
+  "identification": "... is the only transitive group of degree $7$ of that order.",
+  "status": {"realizable": "solved"},     // optional: realizable, regular = solved | open
+  "known_polynomials": [
+    // Either coefficients (lowest degree first), from which the degree, digit bound,
+    // monicity and number of real roots (Sturm) are computed ...
+    {"coefficients": [3, -7, 0, 0, 0, 0, 0, 1], "root_action": true, "source": "..."}
+    // ... or declared properties: {"digits": 100, "monic": true, "real_roots": 7, ...}
+  ],
+  "notes": {"realizable": "...", "regular": "..."},
+  "references": [{"title": "...", "url": "..."}]
+}
+```
+
+`root_action: true` records that the polynomial's Galois action on its roots is the group's
+permutation action up to relabelling.
+
+The generator checks the declared order and fails on a mismatch. The order identifies $G$ only
+together with the `identification` note, so check that note when you add a group.
 
 ## Development
 
 ```bash
 python3 -m unittest discover -s tests   # generator tests
-python3 -m igm23.group                  # check the M23 generators
+python3 -m invgal.group                 # check every group file
 ```
-
-To add a new axis or variant, extend `Variant` in [`igm23/variants.py`](igm23/variants.py):
-its `stem`, `status`, `docstring` and `statement`.
