@@ -112,9 +112,60 @@ permutation action up to relabelling.
 The generator checks the declared order and fails on a mismatch. The order identifies $G$ only
 together with the `identification` note, so check that note when you add a group.
 
+## Five finite-group invariants
+
+The repository also computes five invariants from the same verified group JSON
+files, with Python 3.9+ and [GAP](https://www.gap-system.org/)/
+[HAP](https://gap-packages.github.io/hap/). Sage is not required.
+
+| Invariant | Python API | Lean definition |
+|---|---|---|
+| Finite-field Betti numbers through degree d | `invgal.cohomology.compute_cohomology` | `FiniteGroupCohomology.bettiNumber` |
+| Schur multiplier H_2(G,Z) | `invgal.invariants.schur_multiplier` | `FiniteGroupInvariants.schurMultiplier` |
+| Bogomolov multiplier B0(G) | `invgal.invariants.bogomolov_multiplier` | `FiniteGroupInvariants.bogomolovMultiplier` |
+| Molien series | `invgal.series.molien_series` | `FiniteGroupInvariants.molienSeries` |
+| McKay arrow multiplicities | `invgal.invariants.mckay_quiver` | `FiniteGroupInvariants.mckayMultiplicity` |
+
+For Molien and McKay computations, choose the natural permutation representation
+(the default) or the regular representation. The Python code uses only its
+standard library and invokes GAP as a separate process. On Debian/Ubuntu:
+
+```bash
+sudo apt-get install gap gap-hap
+python3 -m invgal.invariants --list
+python3 -m invgal.invariants --groups PSL27 --invariants betti --p 2 --max-degree 4
+python3 -m invgal.invariants --groups M23 --invariants betti --p 23 --max-degree 22
+python3 -m invgal.invariants --groups PSL27 M23 --invariants schur_multiplier bogomolov_multiplier molien mckay
+python3 -m invgal.invariants --groups M23 --invariants molien --representation regular --max-degree 4
+```
+
+Select a GAP executable with `--gap PATH`. `--timeout SECONDS` limits each GAP
+call (default 300 seconds). Each output line is JSON with the group, invariant
+name and result. A failed or timed-out calculation exits with an error; it does
+not return partial data as a complete invariant. Earlier JSON lines, if any,
+still describe completed calculations. GAP's optional `cohomolo` package
+accelerates large-group Schur multiplier calculations when installed.
+
+See [INVARIANTS.md](INVARIANTS.md) for exact output conventions, Python examples,
+algorithms and practical limits on PSL27 and M23. The two Lean files define the
+mathematical quantities using Mathlib; they do not certify the Python results.
+[formalisation_gaps.md](formalisation_gaps.md) records the remaining comparison
+and interpretation theorems.
+
 ## Development
 
 ```bash
-python3 -m unittest discover -s tests   # generator tests
+python3 -m unittest discover -s tests   # includes GAP tests when available
 python3 -m invgal.group                 # check every group file
 ```
+
+Set `INVGAL_GAP=/path/to/gap` to run the GAP/HAP integration tests with a specific
+executable. Without GAP, those integration tests are skipped. To compile the
+standalone definitions against an existing Mathlib project:
+
+```bash
+python3 check_lean.py --mathlib-project /path/to/mathlib-project --audit-axioms
+```
+
+The definitions were checked with Lean 4.27.0 and Mathlib commit `a3a10db0e9d6`,
+with warnings treated as errors.

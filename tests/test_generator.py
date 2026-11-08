@@ -116,7 +116,7 @@ class CliTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = fake_fc_root(tmp)
             generate(root)
-            base = root / "FormalConjectures/Other/InverseGalois"
+            base = root / "FormalConjectures/InverseGalois"
             for g in ("M23", "PSL27"):
                 files = list((base / g).glob("*.lean"))
                 self.assertEqual(len(files), 38, g)
@@ -130,7 +130,7 @@ class CliTest(unittest.TestCase):
     def test_clean_keeps_hand_written_files(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = fake_fc_root(tmp)
-            out = root / "FormalConjectures/Other/InverseGalois/M23"
+            out = root / "FormalConjectures/InverseGalois/M23"
             generate(root, "--groups", "M23")
             (out / "HandWritten.lean").write_text("-- not generated\n")
             generate(root, "--groups", "M23", "--clean", "--digits", "none",
