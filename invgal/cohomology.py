@@ -1,7 +1,8 @@
-"""Finite-field Betti numbers with trivial coefficients, using GAP/HAP.
+"""Finite-field Betti numbers with trivial coefficients from GAP/HAP.
 
-The resolution is built on a Sylow subgroup and fusion relations are imposed
-in the full group. Both the prime and the inclusive degree bound can vary.
+HAP calculates a resolution on a Sylow subgroup.
+It includes the fusion relations from the full group.
+The caller can change the prime and the degree limit.
 """
 
 import argparse
@@ -39,11 +40,12 @@ def _is_prime(p):
 
 def compute_cohomology(group: GroupSpec, p: int, max_degree: int, *,
                        gap="gap", timeout=300) -> CohomologyResult:
-    """Return dim H^n(G,F_p) for n=0,...,max_degree, with trivial action.
+    """Calculate dim H^n(G,F_p) for n=0,...,max_degree with trivial action.
 
-    GAP is unnecessary in coprime characteristic or for degree zero. Group
-    generators are verified even for these shortcuts. Backend failure or a
-    timeout raises InvariantError; uncomputed dimensions are never filled in.
+    GAP is not necessary for degree zero or coprime characteristic.
+    The function verifies the group order for all inputs.
+    A backend error or timeout causes an InvariantError.
+    The function gives only full results.
     """
     if type(p) is not int or not _is_prime(p):
         raise ValueError("p must be a prime integer")
@@ -58,7 +60,7 @@ def compute_cohomology(group: GroupSpec, p: int, max_degree: int, *,
                              gap=gap, timeout=timeout)
         if (not isinstance(values, list) or len(values) != max_degree + 1
                 or any(type(x) is not int or x < 0 for x in values) or values[0] != 1):
-            raise InvariantError("GAP returned an incomplete or invalid Betti sequence")
+            raise InvariantError("The Betti sequence from GAP is not full or has incorrect entries")
     return CohomologyResult(group.name, group.order, p, tuple(values))
 
 

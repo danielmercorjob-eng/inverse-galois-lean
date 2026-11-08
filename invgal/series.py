@@ -1,4 +1,4 @@
-"""Exact compressed Molien sums for natural and regular permutation representations."""
+"""Molien class sums for natural and regular permutation representations."""
 
 from math import comb
 
@@ -6,10 +6,11 @@ from .backends import InvariantError, gap_compute, positive_int
 
 
 def molien_series(group, *, representation="natural", max_degree=6, gap="gap", timeout=300):
-    """Exact Molien sum for the natural permutation or regular representation.
+    """Molien sum for the natural permutation or regular representation.
 
-    A compressed sum of rational functions remains practical for the regular
-    representation of M23; its polynomial denominator is not expanded.
+    The sum keeps one term for each conjugacy class.
+    With this form, the program can calculate the Molien series for the regular
+    representation of M23 without a large polynomial denominator.
     """
     positive_int(max_degree, "max_degree", 0)
     if representation not in ("natural", "regular"):

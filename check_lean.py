@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check the standalone Lean definitions using an existing Mathlib Lake project."""
+"""Compile the Lean definitions with a Mathlib Lake project."""
 
 import argparse
 import os
@@ -17,7 +17,7 @@ def main():
     args = parser.parse_args()
     root = Path(__file__).resolve().parent
     project = args.mathlib_project.expanduser().resolve()
-    # Query only tool paths; do not copy or print credentials from the environment.
+    # Read only tool paths. Do not copy or print credentials from the environment.
     lean = subprocess.check_output(["lake","env","which","lean"],cwd=project,text=True).strip()
     search = subprocess.check_output(["lake","env","printenv","LEAN_PATH"],cwd=project,text=True).strip()
     with tempfile.TemporaryDirectory(prefix="invgal-lean-") as tmp:

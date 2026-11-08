@@ -1,4 +1,4 @@
-# Internal exact algorithms for invgal.invariants. Inputs are data records.
+# Algorithms for invgal.invariants. The inputs are data records.
 IVJson := function(x)
     local i, names, c;
     if x=fail then Error("backend returned fail instead of an exact invariant"); fi;
@@ -49,8 +49,8 @@ IVSchur := function(G)
     return GroupHomology(G,2);
 end;
 
-# Tensoring irreducible characters computes arrows without the much larger
-# tensor-multiplication table of the entire representation ring.
+# Character inner products give the arrows.
+# The program does not calculate the full multiplication table of the representation ring.
 IVMcKay := function(G,degree,representation)
     local t,irr,classes,values,v,dimension;
     t:=CharacterTable(G); irr:=Irr(t); classes:=ConjugacyClasses(G);

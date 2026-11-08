@@ -1,26 +1,27 @@
 # Five finite-group invariants
 
-These computations consume `GroupSpec` values from `invgal.group.load_groups`.
-They check the actual order of the permutation group against its declared order.
-They use standard-library Python and GAP/HAP, with no Sage dependency or code.
-The associated Mathlib definitions compile without admitted proofs or new axioms.
+The input to each function is a `GroupSpec` from `invgal.group.load_groups`.
+The program compares the group order with the `order` field before it calculates an invariant.
+The program uses Python and GAP/HAP.
+They do not use Sage.
 
-## Algorithms and outputs
+## 1. Betti numbers over Fp
 
-### 1. Finite-field Betti numbers
+`compute_cohomology(G, p, max_degree, gap="gap", timeout=300)` gives a `CohomologyResult`.
+Its `betti_numbers` tuple contains the dimensions of H^n(G,Fp) from degree 0 to `max_degree`, inclusive.
+The coefficients have the trivial G-action.
+These dimensions are not the ranks of integral cohomology.
 
-`compute_cohomology(G, p, max_degree, gap="gap", timeout=300)` returns a
-`CohomologyResult` with `betti_numbers` in degrees 0 through the inclusive bound.
-These are the dimensions of H^n(G,Fp) with **trivial coefficients**, not integral
-ranks. Both the prime and the degree bound can vary. In coprime characteristic,
-or when only degree zero is requested, the computation needs no GAP process.
+You can change the prime p and the degree limit.
+For degree 0, the function does not start GAP.
+If p does not divide |G|, the function gives (1,0,0,...) without GAP.
 
-Otherwise, degree one comes from G's abelianization. In degrees 2 and above the
-backend builds one HAP resolution of a Sylow p-subgroup through degree d+1 and
-reuses it. `PrimePartDerivedFunctor` imposes fusion from the full group. Over a
-field the resulting homology and cohomology dimensions agree. Returning only
-the Sylow Betti numbers would be wrong; the S3 mod-3 test checks this distinction.
-See the [HAP finite-group tutorial](https://gap-packages.github.io/hap/tutorial/chap7.html).
+Degree 1 uses the abelianization of G.
+For higher degrees, HAP calculates one resolution of a Sylow p-subgroup through degree `max_degree+1`.
+The program uses that resolution for each requested degree.
+`PrimePartDerivedFunctor` includes the fusion relations from G.
+Homology and cohomology have the same dimensions over a field.
+The [HAP tutorial](https://gap-packages.github.io/hap/tutorial/chap7.html) gives more information.
 
 ```python
 from invgal.group import load_groups
@@ -31,104 +32,116 @@ result = compute_cohomology(G, p=2, max_degree=4)
 assert result.betti_numbers == (1, 0, 1, 2, 1)
 ```
 
-### 2. Schur multiplier
+## 2. Schur multiplier
 
-`schur_multiplier(G)` returns `free_rank` and `torsion_invariant_factors` of
-H_2(G,Z). It does **not** compute H^2(G,Z). For a finite group this is finite,
-so its free rank is zero. Empty torsion factors mean the trivial group.
+`schur_multiplier(G)` gives the invariant factors of H_2(G,Z).
+It does not calculate H^2(G,Z).
+The result contains `free_rank` and `torsion_invariant_factors`.
+An empty list of torsion factors means the trivial group.
+For a finite group, `free_rank` is zero.
 
-The default backend is HAP's integral homology computation. On groups of order
-above 100,000, an installed `cohomolo` package is used to compute the primary
-parts instead. Results are normalized to invariant factors in divisibility
-order. PSL27 gives C2 and M23 gives the trivial group.
+HAP calculates the integral homology.
+For groups with order above 100,000, the program uses `cohomolo` if that package is available.
+That package calculates the primary parts of the multiplier.
+Each invariant factor divides the next factor.
+PSL27 gives C2.
+M23 gives the trivial group.
 
-### 3. Bogomolov multiplier
+## 3. Bogomolov multiplier
 
-`bogomolov_multiplier(G)` returns the same abelian-group output format for B0(G).
-HAP computes the homological dual quotient; it has the same **abstract invariant
-factors** as the cohomological group in the Lean definition. The output does not
-include cocycle representatives or a canonical duality isomorphism.
+`bogomolov_multiplier(G)` gives the abstract invariant factors of B0(G).
+It uses the same result fields as `schur_multiplier`.
 
-Abelian groups and finite simple groups use their vanishing theorems. Both
-bundled groups are simple, so both answers are trivial. General groups use HAP's
-`BogomolovMultiplier` algorithm; the S3 test exercises that path. See
-[HAP's multiplier API](https://gap-packages.github.io/hap/doc/chap15.html) and
-[Kunyavskii's finite-simple-group vanishing theorem](https://arxiv.org/abs/0712.4069).
+HAP calculates a homological dual quotient.
+That quotient has the same abstract invariant factors as the cohomological group in Lean.
+The result does not contain cocycles or a canonical duality isomorphism.
+The [HAP multiplier API](https://gap-packages.github.io/hap/doc/chap15.html) gives more information.
 
-### 4. Molien series
+For abelian groups and finite simple groups, the program uses the applicable vanishing theorem.
+[Kunyavskii proves vanishing for finite simple groups](https://arxiv.org/abs/0712.4069).
+The two supplied groups are finite simple groups, so each result is the trivial group.
+For other groups, the program uses HAP's `BogomolovMultiplier` algorithm.
+The S3 test uses this algorithm.
 
-`molien_series(G, representation="natural", max_degree=6)` returns the **full**
-exact Molien rational function as a compressed class sum, plus its coefficient
-prefix through `max_degree`. The degree bound limits only that displayed prefix.
+## 4. Molien series
 
-For a permutation with c_l cycles of length l, the determinant denominator is
-product_l (1-t^l)^c_l. The JSON answer specifies
+`molien_series(G, representation="natural", max_degree=6)` gives the full Molien series as a sum of rational functions.
+It also gives the coefficients from degree 0 to `max_degree`, inclusive.
+The degree limit applies only to this coefficient list.
 
-```
+For each conjugacy class, the result includes `class_size` and `cycles`.
+Each item in `cycles` is a pair `(length,count)`.
+The fields `order` and `terms` define this rational function:
+
+```text
 (1/order) * sum(class_size / product((1-t^length)^count))
 ```
 
-using `order` and a list of `terms`, each with its `class_size` and `cycles`
-(length,count) pairs. This is an exact rational-function representation, without
-expanding a huge numerator or denominator. Coefficients are exact integers.
-For the regular representation an element of order l has |G|/l such cycles.
-The regular representation of M23 therefore needs no 10,200,960-dimensional
-matrix or expanded denominator.
+The coefficient list contains integers.
+The rational function keeps its class-sum form.
+The program does not expand its numerator or denominator.
 
-The representation is part of the invariant. The natural action is the one
-stored in the group JSON; it can differ between isomorphic permutation models.
-The regular choice depends only on the abstract group. Arbitrary matrix inputs
-are outside this implementation's scope.
+For the regular representation, an element of order l has |G|/l cycles.
+Thus, a matrix with 10,200,960 rows is not necessary for M23.
 
-### 5. McKay arrow multiplicities
+The natural permutation representation uses the action in the group JSON file.
+An isomorphic group with a different action can have a different Molien series.
+The regular representation depends only on the abstract group.
+The function does not accept other matrix representations.
 
-`mckay_quiver(G, representation="natural")` returns `vertex_dimensions`, an
-`arrows` matrix, and exact character data. Vertex i is the i-th irreducible
-character returned by GAP. Entry (i,j) is
+## 5. McKay arrow multiplicities
 
+`mckay_quiver(G, representation="natural")` gives `vertex_dimensions`, `arrows`, and character data.
+Vertex i is the i-th irreducible character from GAP.
+Entry (i,j) of `arrows` is this multiplicity:
+
+```text
+dim Hom_G(rho_j, V tensor rho_i) = <chi_V * chi_i, chi_j>
 ```
-dim Hom_G(rho_j, V tensor rho_i) = <chi_V * chi_i, chi_j>.
-```
 
-The natural and regular choices of V are the same as for Molien computations.
-`unit_index` identifies the trivial representation, which GAP does not always
-put first. The rows and columns use zero-based indices throughout the Python
-output. `class_sizes`, `class_orders`, and character-value vectors refer to the
-same conjugacy-class ordering.
+V is the natural permutation representation or the regular representation.
+`unit_index` identifies the trivial representation.
+GAP does not always put that representation first.
+All vertex indices start at zero.
 
-Character values are exact GAP cyclotomic strings: `E(n)` denotes exp(2*pi*i/n).
-They are data, not Python expressions to evaluate. Bases and irreducible labels
-may vary between GAP versions. The code computes the arrow matrix directly from
-character inner products, without constructing the entire representation-ring
-multiplication tensor.
+`class_sizes`, `class_orders`, and character vectors use the same conjugacy-class order.
+Character values use GAP cyclotomic strings.
+`E(n)` means `exp(2*pi*i/n)`.
+These strings are data, not Python expressions.
+GAP versions can use different bases and irreducible labels.
 
-## Practical scale and verification
+The program calculates the arrows from character inner products.
+It does not calculate the full multiplication table of the representation ring.
 
-The tests run the actual bundled permutation groups, not stored answers:
+## Tests and time limits
 
-| Computation | PSL27 | M23 |
+The tests calculate results from the supplied permutation generators.
+They do not read stored results.
+
+| Result | PSL27 | M23 |
 |---|---|---|
-| Betti numbers | p=2 through degree 4: (1,0,1,2,1) | p=23 through degree 22: 1 in degrees 0,21,22 and zero between |
-| Schur multiplier | C2 | trivial |
-| Bogomolov multiplier | trivial | trivial |
-| Natural Molien coefficients through degree 4 | (1,1,2,4,7) | (1,1,2,3,5) |
-| McKay natural representation | 6 irreducible vertices | 17 irreducible vertices |
+| Betti numbers | p=2, degrees 0 to 4: (1,0,1,2,1) | p=23, degrees 0 to 22: 1 at 0,21,22 and 0 elsewhere |
+| Schur multiplier | C2 | Trivial group |
+| Bogomolov multiplier | Trivial group | Trivial group |
+| Natural Molien coefficients, degrees 0 to 4 | (1,1,2,4,7) | (1,1,2,3,5) |
+| McKay vertices | 6 | 17 |
 
-Small cyclic and elementary abelian groups check cohomology dimensions and
-multipliers. S3 checks Sylow fusion and the general Bogomolov algorithm. McKay
-tests check sum(dim rho_i)^2=|G| and weighted row dimensions; for the regular
-representation its arrow matrix is dim(rho_i)*dim(rho_j).
+The small-group tests include cyclic groups, elementary abelian groups, and S3.
+The S3 test compares the cohomology dimensions after the fusion relations.
+The McKay tests use character identities.
+For the regular representation, the arrow multiplicity is `dim(rho_i)*dim(rho_j)`.
 
-Higher degrees and different primes can be much harder. M23's Sylow 2-subgroup
-has order 128; the characteristic-2 Betti calculation through degree 4 previously
-exceeded a 300-second limit. The characteristic-23 example is much smaller.
-There is no assertion of practical computation in arbitrary degrees. Schur and
-character computations on M23 took seconds to tens of seconds in development.
+Different primes and higher degrees can use much more time.
+M23 has a Sylow 2-subgroup of order 128.
+At p=2, GAP did not complete the Betti result through degree 4 in 300 seconds or less.
+The tested M23 example uses p=23 and degree 22.
+GAP completed the Schur multiplier and character operations for M23 in seconds to tens of seconds.
+
+To select a GAP executable for the tests, use this command:
 
 ```bash
 INVGAL_GAP=/path/to/gap python3 -m unittest discover -s tests -v
-python3 check_lean.py --mathlib-project /path/to/existing/mathlib-project --audit-axioms
 ```
 
-The Lean files specify the mathematics. They are not a verification of GAP,
-HAP, group identification, integer linear algebra or the JSON interface.
+The Lean definitions do not verify the GAP results or the JSON interface.
+[formalisation_gaps.md](formalisation_gaps.md) identifies the missing theorems.

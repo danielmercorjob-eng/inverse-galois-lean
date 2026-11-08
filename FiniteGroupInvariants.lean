@@ -4,9 +4,9 @@ import GroupCohomologyInvariants
 /-!
 # Schur and Bogomolov multipliers, Molien series and McKay multiplicities
 
-Definitions for the four invariants accompanying the finite-field Betti numbers.
-`formalisation_gaps.md` records the interpretation and comparison theorems not
-proved here. No Python or GAP output is introduced as a Lean axiom.
+This file defines four invariants in addition to the finite-field Betti numbers.
+`formalisation_gaps.md` identifies the missing interpretation and comparison theorems.
+The definitions use no Python or GAP results as Lean axioms.
 -/
 
 noncomputable section
@@ -40,9 +40,9 @@ def bogomolovMultiplier : AddSubgroup
   ⨅ (H : Subgroup G) (_ : ∀ a b : H, a * b = b * a),
     AddMonoidHom.ker (pullback ℤ RationalModIntegers H.subtype 2).toAddMonoidHom
 
-/-- Molien's exact formal series for the given characteristic-zero matrix representation.
-The determinant uses the dual action. Its equality with the invariant-ring Hilbert
-series is not proved here. -/
+/-- Molien's formal series for the input matrix representation in characteristic zero.
+The determinant uses the dual action.
+This file does not prove equality with the invariant-ring Hilbert series. -/
 def molienSeries (k : Type) [Field k] [CharZero k] (ι : Type) [Fintype ι] [DecidableEq ι]
     (ρ : G →* Matrix.GeneralLinearGroup ι k) : PowerSeries k := by
   classical
@@ -54,7 +54,7 @@ def molienSeries (k : Type) [Field k] [CharZero k] (ι : Type) [Fintype ι] [Dec
       ((1 : Matrix ι ι (Polynomial k)) - (Polynomial.X : Polynomial k) • polynomialMatrix)
     (denominator : PowerSeries k)⁻¹
 
-/-- Tensor multiplicity giving the number of McKay arrows from `U` to `W`. -/
+/-- The tensor multiplicity is the number of McKay arrows from `U` to `W`. -/
 def mckayMultiplicity (V U W : FDRep ℂ G) [Simple U] [Simple W] : ℕ :=
   Module.finrank ℂ (W ⟶ (V ⊗ U))
 

@@ -1,137 +1,139 @@
 # inverse-galois-lean
 
-A Python generator for Lean 4 variants of the **inverse Galois problem** for finite
-permutation groups. The output is in the format of
-[Formal Conjectures](https://github.com/google-deepmind/formal-conjectures).
+This project uses Python to write Lean files for the inverse Galois problem.
+It also calculates [five finite-group invariants](INVARIANTS.md).
+The group files include M23 and PSL(2,7).
 
-It started from the
-[Epoch AI FrontierMath open problem for M₂₃](https://epoch.ai/frontiermath/open-problems/inverse-galois):
+The project includes the [Epoch AI problem for M23](https://epoch.ai/frontiermath/open-problems/inverse-galois).
+The polynomial must have degree 23 and integer coefficients.
+Its splitting field over Q must have Galois group M23.
+Each coefficient must have a decimal digit count less than 100.
 
-> Find a degree 23 polynomial with integer coefficients, each with fewer than 100 decimal
-> digits, whose splitting field over ℚ has Galois group M₂₃.
+## Write Lean files
 
-Groups are data. Each group is a JSON file in [`groups/`](groups). The repository includes
-M₂₃ and PSL(2, 7).
+Python 3.9+ is necessary for the generator.
+It writes files into a local copy of [Formal Conjectures](https://github.com/google-deepmind/formal-conjectures).
+The output directory is `FormalConjectures/InverseGalois/<Group>/`.
+Each file defines a group and one theorem for the inverse Galois problem.
+That theorem has one `sorry`, so Lean does not verify it.
+The generated tests use `decide`.
 
-The generator writes problem files into a local Formal Conjectures clone, under
-`FormalConjectures/InverseGalois/<Group>/`. Each generated file:
-
-- follows the Formal Conjectures file template (copyright header, `module`,
-  `public import FormalConjecturesUtil`, module docstring with references);
-- is self-contained: it defines the group as a subgroup of `Equiv.Perm (Fin n)` and has its own
-  namespace, `InverseGaloisVariants.<Group><Variant>`;
-- has **exactly one `sorry`**: the proof of its main theorem. The `@[category test]` checks of
-  the generators are proved by `decide`.
-
-## Usage
-
-Requires Python 3.9+ and nothing else.
+Use these commands from the project directory:
 
 ```bash
-./generate.py --list                    # show the variants and their status; write nothing
-./generate.py                           # all groups, default variants
+./generate.py --list
+./generate.py
 ./generate.py --groups M23 --digits 100 50 none
-cd ~/formal-conjectures && lake build   # builds the new files; everything else is cached
 ```
 
-| Option | Meaning |
+To compile the generated files, use this command in the Formal Conjectures directory:
+
+```bash
+lake build
+```
+
+| Option | Function |
 |---|---|
-| `--fc-root PATH` | Formal Conjectures checkout (default `~/formal-conjectures`) |
-| `--subdir DIR` | output directory inside it (default `FormalConjectures/InverseGalois`) |
-| `--groups G …` | groups to use (default: every file in `groups/`) |
-| `--groups-dir DIR` | where to read group files from |
-| `--actions abstract roots` | how the Galois group is stated (see below) |
-| `--normalizations any monic monic_irreducible` | conditions on $f$ |
-| `--digits N … none` | coefficients have fewer than $N$ decimal digits; `none` for no bound |
-| `--real-roots k … none` | exact number of real roots |
-| `--no-realizable`, `--no-regular` | skip the two field-theoretic variants |
-| `--skip-unknown` | only generate variants whose status the group file settles |
-| `--clean` | delete previously generated files of the selected groups first (hand-written files are kept) |
-| `--build` | run `lake --wfail build` on the generated modules |
+| `--fc-root PATH` | Set the Formal Conjectures directory. The initial value is `~/formal-conjectures`. |
+| `--subdir DIR` | Set the output directory in that project. The initial value is `FormalConjectures/InverseGalois`. |
+| `--groups G …` | Select groups. Without this option, the generator uses all group files. |
+| `--groups-dir DIR` | Select the directory with the group files. |
+| `--actions abstract roots` | Select the Galois group definition. |
+| `--normalizations any monic monic_irreducible` | Select the polynomial conditions. |
+| `--digits N … none` | Set the decimal digit limit. Use `none` for no limit. |
+| `--real-roots k … none` | Set the number of real roots. Use `none` for no condition. |
+| `--no-realizable` | Do not write the `Realizable` statement. |
+| `--no-regular` | Do not write the `RegularOverRatFunc` statement. |
+| `--skip-unknown` | Do not write statements with an `unknown` status. |
+| `--clean` | Delete earlier generated files for the selected groups. Keep other files. |
+| `--build` | Compile the generated modules with `lake --wfail build`. |
 
-## Variants
+### Statement options
 
-For a group $G \le S_n$, polynomial variants are the product of these axes:
+For G in S_n, the generator uses these options:
 
-- **Galois group (`--actions`)**
-  - `abstract`: `Nonempty ((f.map (Int.castRingHom ℚ)).Gal ≃* G)`.
-  - `roots`: for some bijection between the complex roots and `Fin n`, the image of the
-    Galois action is exactly `G ≤ Equiv.Perm (Fin n)`.
-- **Normalization:** any polynomial, monic, or monic and irreducible. The irreducible option is
-  skipped for intransitive groups, where it is false.
-- **Digit bound:** `(Nat.digits 10 (f.coeff i).natAbs).length < N` for all `i`. The default
-  bounds are those of the group's known polynomials, plus no bound.
-- **Real roots:** complex conjugation acts on the roots as the identity or as an involution of
-  $G$. So the possible counts are $n$ and the fixed-point counts of involutions. The generator
-  computes these by random sampling and rejects other counts.
+- Galois group: an abstract isomorphism, or equality with the Galois action on the roots.
+- Polynomial: a polynomial with no more conditions, a monic polynomial, or a monic irreducible polynomial.
+- Decimal digit limit: limits from the known polynomials, or no limit.
+- Real roots: no condition, or a permitted root count.
 
-There are also two standalone variants:
+For an intransitive action, the generator does not write `monic_irreducible` statements.
+The permitted root counts depend on complex conjugation.
+The generator uses random samples of involutions to find those counts.
+It rejects other requested counts.
 
-- **`Realizable`:** a finite Galois extension of ℚ has Galois group $G$.
-- **`RegularOverRatFunc`:** $G$ is a regular Galois group over ℚ(t).
+Two more statements give conditions on field extensions:
 
-### Status
+- `Realizable`: G is a Galois group over Q.
+- `RegularOverRatFunc`: G is a regular Galois group over Q(t).
 
-Each variant gets one of three statuses:
+Each statement has one status:
 
-- **`solved`**: it follows from the group file by an elementary argument. Either a known
-  polynomial satisfies all its conditions, or it has no digit bound and no real-root
-  condition and $G$ is realizable over ℚ. In that case scaling gives a monic polynomial, and a
-  transitive Galois group makes it irreducible.
-- **`open`**: the group file records it as open. Every polynomial variant is open when
-  realizability is open.
-- **`unknown`**: the group file does not settle it. These files get
-  `@[category research open]` and say so in their docstring. Use `--skip-unknown` to omit them.
+| Status | Meaning |
+|---|---|
+| `solved` | A known polynomial or an existence result gives a solution. |
+| `open` | The group file identifies the statement as an open problem. |
+| `unknown` | The group file does not give a solution or an open status. |
 
-## Group files
+The generator writes `@[category research open]` for an `unknown` statement.
+
+### Group files
+
+Each JSON file in [groups/](groups) defines one permutation group.
+This example shows the input fields:
 
 ```jsonc
 {
-  "name": "PSL27",                        // Lean identifier, folder name
+  "name": "PSL27",
   "latex": "\\mathrm{PSL}(2, 7)",
-  "description": "the simple group ... acting on the $7$ points of the Fano plane",
+  "description": "PSL(2,7) on the seven points of the Fano plane",
   "degree": 7,
-  "order": 168,                           // checked by Schreier–Sims
-  "generators": [[[1, 2, 3, 4, 5, 6, 7]], [[3, 5], [6, 7]]],   // 1-indexed cycles
-  "identification": "... is the only transitive group of degree $7$ of that order.",
-  "status": {"realizable": "solved"},     // optional: realizable, regular = solved | open
+  "order": 168,
+  "generators": [[[1, 2, 3, 4, 5, 6, 7]], [[3, 5], [6, 7]]],
+  "identification": "The unique transitive group of degree 7 and order 168",
+  "status": {"realizable": "solved"},
   "known_polynomials": [
-    // Either coefficients (lowest degree first), from which the degree, digit bound,
-    // monicity and number of real roots (Sturm) are computed ...
     {"coefficients": [3, -7, 0, 0, 0, 0, 0, 1], "root_action": true, "source": "..."}
-    // ... or declared properties: {"digits": 100, "monic": true, "real_roots": 7, ...}
   ],
-  "notes": {"realizable": "...", "regular": "..."},
+  "notes": {"realizable": "..."},
   "references": [{"title": "...", "url": "..."}]
 }
 ```
 
-`root_action: true` records that the polynomial's Galois action on its roots is the group's
-permutation action up to relabelling.
+The generator cycles use point numbers from 1 to `degree`.
+The polynomial coefficients start with the constant coefficient.
+As an alternative, a known polynomial can give its `digits`, `monic`, and `real_roots` properties.
+`root_action: true` means that the polynomial's Galois action and the group's permutation action agree up to a change of labels.
 
-The generator checks the declared order and fails on a mismatch. The order identifies $G$ only
-together with the `identification` note, so check that note when you add a group.
+The program calculates the group order from the generators.
+It compares that order with `order` in the JSON file.
+The order does not always identify the group.
+The `identification` field gives more mathematical information.
 
-## Five finite-group invariants
+## Calculate five invariants
 
-The repository also computes five invariants from the same verified group JSON
-files, with Python 3.9+ and [GAP](https://www.gap-system.org/)/
-[HAP](https://gap-packages.github.io/hap/). Sage is not required.
+This program uses Python 3.9+, [GAP](https://www.gap-system.org/), and [HAP](https://gap-packages.github.io/hap/).
+The Python code uses its standard library.
+It starts GAP as a different process.
+Sage is not necessary.
 
-| Invariant | Python API | Lean definition |
+| Invariant | Python function | Lean definition |
 |---|---|---|
-| Finite-field Betti numbers through degree d | `invgal.cohomology.compute_cohomology` | `FiniteGroupCohomology.bettiNumber` |
-| Schur multiplier H_2(G,Z) | `invgal.invariants.schur_multiplier` | `FiniteGroupInvariants.schurMultiplier` |
-| Bogomolov multiplier B0(G) | `invgal.invariants.bogomolov_multiplier` | `FiniteGroupInvariants.bogomolovMultiplier` |
+| Betti numbers over Fp | `invgal.cohomology.compute_cohomology` | `FiniteGroupCohomology.bettiNumber` |
+| Schur multiplier | `invgal.invariants.schur_multiplier` | `FiniteGroupInvariants.schurMultiplier` |
+| Bogomolov multiplier | `invgal.invariants.bogomolov_multiplier` | `FiniteGroupInvariants.bogomolovMultiplier` |
 | Molien series | `invgal.series.molien_series` | `FiniteGroupInvariants.molienSeries` |
 | McKay arrow multiplicities | `invgal.invariants.mckay_quiver` | `FiniteGroupInvariants.mckayMultiplicity` |
 
-For Molien and McKay computations, choose the natural permutation representation
-(the default) or the regular representation. The Python code uses only its
-standard library and invokes GAP as a separate process. On Debian/Ubuntu:
+On Debian or Ubuntu, install the dependencies with this command:
 
 ```bash
 sudo apt-get install gap gap-hap
+```
+
+Use these commands from the project directory:
+
+```bash
 python3 -m invgal.invariants --list
 python3 -m invgal.invariants --groups PSL27 --invariants betti --p 2 --max-degree 4
 python3 -m invgal.invariants --groups M23 --invariants betti --p 23 --max-degree 22
@@ -139,33 +141,41 @@ python3 -m invgal.invariants --groups PSL27 M23 --invariants schur_multiplier bo
 python3 -m invgal.invariants --groups M23 --invariants molien --representation regular --max-degree 4
 ```
 
-Select a GAP executable with `--gap PATH`. `--timeout SECONDS` limits each GAP
-call (default 300 seconds). Each output line is JSON with the group, invariant
-name and result. A failed or timed-out calculation exits with an error; it does
-not return partial data as a complete invariant. Earlier JSON lines, if any,
-still describe completed calculations. GAP's optional `cohomolo` package
-accelerates large-group Schur multiplier calculations when installed.
+For Molien and McKay results, select the natural permutation representation or the regular representation.
+The program uses the natural permutation representation unless you select `regular`.
+Select a GAP executable with `--gap PATH`.
+Set the time limit for each GAP call with `--timeout SECONDS`.
+The initial time limit is 300 seconds.
 
-See [INVARIANTS.md](INVARIANTS.md) for exact output conventions, Python examples,
-algorithms and practical limits on PSL27 and M23. The two Lean files define the
-mathematical quantities using Mathlib; they do not certify the Python results.
-[formalisation_gaps.md](formalisation_gaps.md) records the remaining comparison
-and interpretation theorems.
+Each output line gives one completed result in JSON format.
+If GAP cannot complete an operation, the program stops with an error.
+The previous output lines give completed results.
+The optional `cohomolo` package can decrease the time to calculate large Schur multipliers.
 
-## Development
+[INVARIANTS.md](INVARIANTS.md) gives the algorithms, result formats, and time limits.
+The Lean files define the mathematical quantities.
+They do not prove that the Python results are correct.
+[formalisation_gaps.md](formalisation_gaps.md) identifies the missing comparison theorems.
+[TECHNICAL_TERMS.md](TECHNICAL_TERMS.md) gives the meanings of the project terms for the English text.
+
+## Test the project
+
+Use these commands:
 
 ```bash
-python3 -m unittest discover -s tests   # includes GAP tests when available
-python3 -m invgal.group                 # check every group file
+python3 -m unittest discover -s tests
+python3 -m invgal.group
 ```
 
-Set `INVGAL_GAP=/path/to/gap` to run the GAP/HAP integration tests with a specific
-executable. Without GAP, those integration tests are skipped. To compile the
-standalone definitions against an existing Mathlib project:
+For a different GAP executable, set `INVGAL_GAP=/path/to/gap`.
+Without GAP, the test suite does not start the GAP tests.
+
+To compile the Lean definitions, use a Mathlib project:
 
 ```bash
 python3 check_lean.py --mathlib-project /path/to/mathlib-project --audit-axioms
 ```
 
-The definitions were checked with Lean 4.27.0 and Mathlib commit `a3a10db0e9d6`,
-with warnings treated as errors.
+The definitions compile with Lean 4.27.0 and Mathlib commit `a3a10db0e9d6`.
+The command gives an error for each Lean warning.
+The axiom audit rejects axioms other than Lean's standard logical axioms.

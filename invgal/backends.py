@@ -1,4 +1,4 @@
-"""Checked subprocess interface for exact GAP/HAP computations."""
+"""Subprocess interface for GAP/HAP algorithms."""
 
 import json
 import math
@@ -13,11 +13,11 @@ from .group import group_order, identity
 
 
 class InvariantError(RuntimeError):
-    """A backend, its dependencies, or a mathematical precondition failed."""
+    """The backend cannot complete the operation."""
 
 
 class ResourceLimit(InvariantError):
-    """A requested exact calculation exceeded an explicit resource bound."""
+    """The process did not complete in the permitted time."""
 
 
 def checked_perms(group):
@@ -37,7 +37,7 @@ def positive_int(n, name, minimum=1):
 
 
 def gap_literal(value):
-    """Serialize data, never executable expressions, to a GAP literal."""
+    """Serialize data as a GAP literal. Do not accept executable expressions."""
     if isinstance(value, bool):
         return str(value).lower()
     if isinstance(value, int):
@@ -72,7 +72,7 @@ def run_json(command, *, source=None, payload=None, timeout=300, env=None):
     except OSError as e:
         raise InvariantError(f"cannot execute {command[0]!r}: {e}") from e
     except subprocess.TimeoutExpired as e:
-        raise ResourceLimit(f"{command[0]} exceeded {timeout} seconds; no result certified") from e
+        raise ResourceLimit(f"{command[0]} exceeded {timeout} seconds. No result is available") from e
     begin, end = "INVGAL_JSON_BEGIN\n", "\nINVGAL_JSON_END"
     if proc.returncode or stdout.count(begin) != 1 or end not in stdout:
         raise InvariantError(f"backend failed (exit {proc.returncode}):\n"
@@ -99,7 +99,7 @@ def gap_compute(group, operation, *, gap="gap", timeout=300, **parameters):
 
 
 def abelian_group(invariants):
-    """Normalize elementary divisors to invariant factors; 0 denotes a free Z summand."""
+    """Convert elementary divisors to invariant factors. Zero identifies a free Z summand."""
     free = invariants.count(0)
     primary = {}
     for n in invariants:

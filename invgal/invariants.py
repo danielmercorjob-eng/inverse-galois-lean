@@ -1,7 +1,7 @@
-"""Five finite-group invariants computed with Python and GAP/HAP, without Sage.
+"""Calculate five finite-group invariants with Python and GAP/HAP.
 
-All calculations use the same verified permutation generators as the original
-inverse-Galois generator. Run with --list for the five available invariants.
+The program uses the permutation generators in the group files.
+Use --list to see the five invariants. Sage is not necessary.
 """
 
 import argparse
@@ -22,8 +22,8 @@ def schur_multiplier(group, *, gap="gap", timeout=300):
 def bogomolov_multiplier(group, *, gap="gap", timeout=300):
     """Abstract invariant factors of B0(G), not chosen cohomology classes.
 
-    HAP computes the homological dual version, with the same abstract invariant
-    factors. Abelian and simple groups use their vanishing theorems.
+    HAP calculates a homological dual with the same abstract invariant factors.
+    For abelian groups and finite simple groups, the function uses vanishing theorems.
     """
     return abelian_group(gap_compute(group, "bogomolov_multiplier", gap=gap, timeout=timeout))
 
@@ -32,8 +32,8 @@ def mckay_quiver(group, *, representation="natural", gap="gap", timeout=300):
     """Rows i, columns j give dim Hom_G(rho_j,V tensor rho_i).
 
     V is the group's natural permutation representation or its regular
-    representation. Character values are exact GAP cyclotomic strings.
-    unit_index identifies the trivial vertex; it need not be vertex zero.
+    representation. Character values are GAP cyclotomic strings.
+    unit_index identifies the trivial vertex. Its value can differ from zero.
     """
     if representation not in ("natural", "regular"):
         raise ValueError("representation must be natural or regular")
@@ -44,10 +44,10 @@ def mckay_quiver(group, *, representation="natural", gap="gap", timeout=300):
 
 
 INVARIANTS = {
-    "betti": "Finite-field Betti numbers through an inclusive degree bound",
+    "betti": "Finite-field Betti numbers from degree zero to the degree limit",
     "schur_multiplier": "Second integral homology, as abelian invariant factors",
     "bogomolov_multiplier": "Bogomolov multiplier, as abelian invariant factors",
-    "molien": "Full compressed Molien series and an exact coefficient prefix",
+    "molien": "Molien class sum and coefficients to the degree limit",
     "mckay": "McKay arrow multiplicities and irreducible character data",
 }
 

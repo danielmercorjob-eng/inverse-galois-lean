@@ -5,9 +5,10 @@ import Mathlib.RepresentationTheory.Homological.GroupCohomology.LowDegree
 /-!
 # Finite-field Betti numbers
 
-Definitions for the dimensions of `H^n(G, ZMod p)` with trivial coefficients,
-including finite-dimensionality, the degree-zero dimension and a bounded list API.
-These are mathematical specifications; the Python/GAP output is not a Lean certificate.
+This file defines the dimensions of `H^n(G, ZMod p)` with trivial coefficients.
+It proves finite dimensionality and the degree-zero dimension.
+It also defines a Betti list with a degree limit.
+These definitions do not verify the Python/GAP results.
 -/
 
 noncomputable section
@@ -19,8 +20,9 @@ namespace FiniteGroupCohomology
 
 variable (G : Type) [Group G] [Finite G] (p : ℕ) [Fact p.Prime]
 
-/-- Every cohomology group here is finite dimensional: cocycles form a subspace
-of the finite-dimensional cochain space, and cohomology is a quotient of cocycles. -/
+/-- Each cohomology group has finite dimension.
+The cocycle space is a subspace of the cochain space with finite dimension.
+Cohomology is a quotient of cocycles. -/
 instance finiteDimensionalCohomology (n : ℕ) :
     FiniteDimensional (ZMod p)
       (groupCohomology (Rep.trivial (ZMod p) G (ZMod p)) n) := by
@@ -44,7 +46,7 @@ theorem bettiNumber_zero : bettiNumber G p 0 = 1 := by
   simpa [bettiNumber] using
     (groupCohomology.H0IsoOfIsTrivial (Rep.trivial (ZMod p) G (ZMod p))).toLinearEquiv.finrank_eq
 
-/-- The Betti numbers from degree zero through the inclusive bound `d`. -/
+/-- The Betti numbers from degree zero to degree `d`, inclusive. -/
 def bettiNumbers (d : ℕ) : List ℕ :=
   List.ofFn fun n : Fin (d + 1) => bettiNumber G p n
 
