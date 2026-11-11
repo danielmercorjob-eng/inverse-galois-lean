@@ -74,7 +74,8 @@ IVMcKay := function(G,degree,representation)
 end;
 
 IVCompute := function(G,degree,operation,options)
-    local p,d,values,P,R,F,n,classes,c,rep,cycles,terms;
+    local p,d,values,P,R,F,n,classes,c,rep,cycles,terms,
+        out,vals,S,periodic,A,subgroups,x,y,factors;
     if operation="betti" then
         IVHap(); p:=options.p; d:=options.max_degree; values:=[1];
         if d>=1 then
@@ -111,5 +112,64 @@ IVCompute := function(G,degree,operation,options)
         return rec(order:=Size(G),terms:=terms);
     elif operation="mckay" then
         return IVMcKay(G,degree,options.representation);
+    elif operation="integral_cohomology" then
+        IVHap(); out:=[];
+        for n in options.degrees do
+            if n=0 then vals:=[0]; elif n=1 then vals:=[];
+            else vals:=GroupCohomology(G,n); fi;
+            Add(out,rec(degree:=n,invariants:=vals));
+        od;
+        return out;
+    elif operation="periodicity" then
+        if Size(G)=1 then return rec(period:=1,periodic:=true); fi;
+        periodic:=true;
+        for p in Set(FactorsInt(Size(G))) do
+            S:=SylowSubgroup(G,p);
+            if not IsCyclic(S) then
+                if p<>2 or Sum(List(Filtered(ConjugacyClasses(S),c->Order(Representative(c))=2),Size))<>1
+                then periodic:=false; fi;
+            fi;
+        od;
+        if not periodic then return rec(period:="infinity",periodic:=false); fi;
+        if IsCyclic(G) then return rec(period:=2,periodic:=true); fi;
+        IVHap();
+        for d in [1..options.max_period] do
+            if d=1 then vals:=[]; else vals:=GroupCohomology(G,d); fi;
+            if Product(vals)=Size(G) and IsCyclic(AbelianGroup(vals)) then
+                return rec(period:=d,periodic:=true);
+            fi;
+        od;
+        Error("periodic, but least period exceeds max_period");
+    elif operation="abelian_structure" then
+        if not IsAbelian(G) then return rec(abelian:=false); fi;
+        S:=SylowSubgroup(G,options.p);
+        return rec(abelian:=true,orders:=List(IndependentGeneratorsOfAbelianGroup(S),Order));
+    elif operation="restriction_family" then
+        if Size(G)>options.max_elements then Error("restriction family exceeds max_elements"); fi;
+        A:=Concatenation([One(G)],Filtered(Elements(G),x->x<>One(G)));
+        if options.essential then subgroups:=MaximalSubgroups(G);
+        else
+            subgroups:=List(options.subgroups,gs->Group(
+                Concatenation([One(G)],List(gs,perm->PermList(List(perm,x->x+1))))));
+        fi;
+        if Length(subgroups)>options.max_subgroups then Error("restriction family exceeds max_subgroups"); fi;
+        for S in subgroups do
+            if not IsSubgroup(G,S) then Error("a detection subgroup is not contained in G"); fi;
+        od;
+        return List(subgroups,S->List(Filtered(A,x->x in S),x->Position(A,x)-1));
+    elif operation="cyclic_sylow" then
+        p:=options.p; S:=SylowSubgroup(G,p);
+        if not IsCyclic(S) then return rec(cyclic:=false,order:=Size(S)); fi;
+        return rec(cyclic:=true,order:=Size(S),
+            automizer:=Size(Normalizer(G,S))/Size(Centralizer(G,S)));
+    elif operation="factor_polynomial" then
+        A:=UnivariatePolynomial(Rationals,options.coefficients);
+        factors:=Collected(Factors(A));
+        return List(factors,x->rec(coefficients:=CoefficientsOfUnivariatePolynomial(x[1]),multiplicity:=x[2]));
+    elif operation="finite_model" then
+        if Size(G)>options.max_elements then Error("finite_model exceeds max_elements"); fi;
+        A:=Concatenation([One(G)],Filtered(Elements(G),x->x<>One(G)));
+        return rec(table:=List(A,x->List(A,y->Position(A,x*y)-1)),
+            elements:=List(A,x->List([1..degree],i->i^x)));
     else Error("unknown invariant operation"); fi;
 end;

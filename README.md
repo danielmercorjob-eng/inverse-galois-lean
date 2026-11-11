@@ -1,7 +1,7 @@
 # inverse-galois-lean
 
 This project uses Python to write Lean files for the inverse Galois problem.
-It also calculates [five finite-group invariants](INVARIANTS.md).
+It also calculates [five finite-group invariants](INVARIANTS.md) and [five more cohomology invariants](COHOMOLOGY.md).
 The group files include M23 and PSL(2,7).
 
 The project includes the [Epoch AI problem for M23](https://epoch.ai/frontiermath/open-problems/inverse-galois).
@@ -110,7 +110,7 @@ It compares that order with `order` in the JSON file.
 The order does not always identify the group.
 The `identification` field gives more mathematical information.
 
-## Calculate five invariants
+## Calculate invariants
 
 This program uses Python 3.9+, [GAP](https://www.gap-system.org/), and [HAP](https://gap-packages.github.io/hap/).
 The Python code uses its standard library.
@@ -124,6 +124,9 @@ Sage is not necessary.
 | Bogomolov multiplier | `invgal.invariants.bogomolov_multiplier` | `FiniteGroupInvariants.bogomolovMultiplier` |
 | Molien series | `invgal.series.molien_series` | `FiniteGroupInvariants.molienSeries` |
 | McKay arrow multiplicities | `invgal.invariants.mckay_quiver` | `FiniteGroupInvariants.mckayMultiplicity` |
+
+[COHOMOLOGY.md](COHOMOLOGY.md) gives five more invariants: integral cohomology, full Poincare series, zero and pole multiplicities, detection kernels, and integral periodicity.
+These functions also use only Python and GAP/HAP.
 
 On Debian or Ubuntu, install the dependencies with this command:
 

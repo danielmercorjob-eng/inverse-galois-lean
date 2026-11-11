@@ -1,3 +1,4 @@
+import Mathlib.RingTheory.PowerSeries.Basic
 import Mathlib.Algebra.Field.ZMod
 import Mathlib.LinearAlgebra.FiniteDimensional.Basic
 import Mathlib.RepresentationTheory.Homological.GroupCohomology.LowDegree
@@ -59,5 +60,20 @@ theorem getElem_bettiNumbers (d n : ℕ) (h : n < (bettiNumbers G p d).length) :
     (bettiNumbers G p d)[n] = bettiNumber G p n := by
   unfold bettiNumbers at h ⊢
   rw [List.getElem_ofFn]
+
+/-- The full Poincare series has the Betti numbers as integer coefficients. -/
+def poincareSeries : PowerSeries ℤ :=
+  PowerSeries.mk fun n => (bettiNumber G p n : ℤ)
+
+@[simp]
+theorem coeff_poincareSeries (n : ℕ) :
+    PowerSeries.coeff n (poincareSeries G p) = (bettiNumber G p n : ℤ) := by
+  simp [poincareSeries]
+
+@[simp]
+theorem constantCoeff_poincareSeries :
+    PowerSeries.constantCoeff (poincareSeries G p) = 1 := by
+  rw [← PowerSeries.coeff_zero_eq_constantCoeff_apply]
+  simp
 
 end FiniteGroupCohomology

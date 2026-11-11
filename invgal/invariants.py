@@ -1,7 +1,7 @@
-"""Calculate five finite-group invariants with Python and GAP/HAP.
+"""Calculate ten finite-group invariants with Python and GAP/HAP.
 
 The program uses the permutation generators in the group files.
-Use --list to see the five invariants. Sage is not necessary.
+Use --list to see the ten invariants. Sage is not necessary.
 """
 
 import argparse
@@ -11,7 +11,9 @@ from pathlib import Path
 from .backends import InvariantError, abelian_group, gap_compute, positive_int
 from .cohomology import compute_cohomology
 from .group import GROUPS_DIR, load_groups
-from .series import molien_series
+from .series import molien_series, zeros_and_poles
+from .cohomology_series import hilbert_poincare_series
+from .detection import detection_kernel
 
 
 def schur_multiplier(group, *, gap="gap", timeout=300):
@@ -43,7 +45,36 @@ def mckay_quiver(group, *, representation="natural", gap="gap", timeout=300):
     return data
 
 
+def cohomology_groups(group, degrees, *, p=None, gap="gap", timeout=300):
+    """Cohomology with trivial Z coefficients, or dimensions over Fp."""
+    degrees = list(degrees)
+    if not degrees:
+        raise ValueError("provide at least one degree")
+    for n in degrees:
+        positive_int(n, "degree", 0)
+    if p is not None:
+        result = compute_cohomology(group, p, max(degrees), gap=gap, timeout=timeout)
+        return [dict(degree=n, p=p, dimension=result.betti_numbers[n]) for n in degrees]
+    data = gap_compute(group, "integral_cohomology", degrees=degrees, gap=gap, timeout=timeout)
+    return [dict(degree=d["degree"], **abelian_group(d["invariants"])) for d in data]
+
+
+def integral_periodicity(group, *, max_period=64, gap="gap", timeout=300):
+    """Integral periodicity and least positive period, or infinity.
+
+    A search that reaches max_period without a result gives an error.
+    The period of the trivial group is 1.
+    """
+    positive_int(max_period, "max_period")
+    return gap_compute(group, "periodicity", max_period=max_period, gap=gap, timeout=timeout)
+
+
 INVARIANTS = {
+    "integral_cohomology": "Integral cohomology in degrees zero to the degree limit",
+    "poincare_series": "Full rational cohomology series over Fp",
+    "zeros_and_poles": "Zero and pole factors of the full reduced Poincare series",
+    "detection_kernel": "Essential cohomology in degrees zero to the degree limit",
+    "periodicity": "Integral periodicity and least positive period",
     "betti": "Finite-field Betti numbers from degree zero to the degree limit",
     "schur_multiplier": "Second integral homology, as abelian invariant factors",
     "bogomolov_multiplier": "Bogomolov multiplier, as abelian invariant factors",
@@ -58,8 +89,9 @@ def main():
     parser.add_argument("--groups", nargs="+")
     parser.add_argument("--groups-dir", type=Path, default=GROUPS_DIR)
     parser.add_argument("--invariants", nargs="+", choices=INVARIANTS)
-    parser.add_argument("--p", type=int, help="prime for Betti numbers")
+    parser.add_argument("--p", type=int, help="prime for finite-field cohomology")
     parser.add_argument("--max-degree", type=int, default=4)
+    parser.add_argument("--max-period", type=int, default=64)
     parser.add_argument("--representation", choices=("natural", "regular"), default="natural")
     parser.add_argument("--gap", default="gap")
     parser.add_argument("--timeout", type=float, default=300)
@@ -70,8 +102,9 @@ def main():
         return
     if not args.invariants:
         parser.error("select one or more --invariants (or use --list)")
-    if "betti" in args.invariants and args.p is None:
-        parser.error("--p is required for Betti numbers")
+    modular = {"betti", "poincare_series", "zeros_and_poles", "detection_kernel"}
+    if modular.intersection(args.invariants) and args.p is None:
+        parser.error("--p is required for finite-field cohomology")
     try:
         positive_int(args.max_degree, "max_degree", 0)
         for group in load_groups(args.groups, args.groups_dir):
@@ -79,6 +112,16 @@ def main():
             for name in args.invariants:
                 if name == "betti":
                     result = compute_cohomology(group, args.p, args.max_degree, **backend).to_dict()
+                elif name == "integral_cohomology":
+                    result = cohomology_groups(group, range(args.max_degree+1), **backend)
+                elif name in ("poincare_series", "zeros_and_poles"):
+                    series = hilbert_poincare_series(group, args.p, **backend)
+                    result = (series.to_dict() if name == "poincare_series" else
+                              zeros_and_poles(group, series, **backend))
+                elif name == "detection_kernel":
+                    result = detection_kernel(group, args.p, max_degree=args.max_degree, **backend)
+                elif name == "periodicity":
+                    result = integral_periodicity(group, max_period=args.max_period, **backend)
                 elif name == "molien":
                     result = molien_series(group, representation=args.representation,
                                            max_degree=args.max_degree, **backend)
