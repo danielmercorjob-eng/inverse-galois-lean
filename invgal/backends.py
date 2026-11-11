@@ -1,4 +1,4 @@
-"""Subprocess interface for GAP/HAP algorithms."""
+"""Subprocess interfaces for Python and GAP/HAP algorithms."""
 
 import json
 import math
@@ -6,6 +6,7 @@ import os
 import re
 import signal
 import subprocess
+import sys
 from fractions import Fraction
 from pathlib import Path
 
@@ -17,7 +18,7 @@ class InvariantError(RuntimeError):
 
 
 class ResourceLimit(InvariantError):
-    """The process did not complete in the permitted time."""
+    """The operation exceeded a size or time limit."""
 
 
 def checked_perms(group):
@@ -55,18 +56,21 @@ def gap_literal(value):
     raise TypeError(f"cannot serialize {type(value).__name__} to GAP")
 
 
-def run_json(command, *, source=None, payload=None, timeout=300, env=None):
+def run_json(command, *, source=None, payload=None, timeout=300, env=None, start_new_session=True):
     if not isinstance(timeout, (float, int)) or not math.isfinite(timeout) or timeout <= 0:
         raise ValueError("timeout must be positive and finite")
     try:
         proc = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE, text=True, env=env,
-                                start_new_session=True)
+                                start_new_session=start_new_session)
         try:
             stdout, stderr = proc.communicate(source if payload is None else json.dumps(payload),
                                                timeout=timeout)
         except subprocess.TimeoutExpired:
-            os.killpg(proc.pid, signal.SIGKILL)
+            if start_new_session:
+                os.killpg(proc.pid, signal.SIGKILL)
+            else:
+                proc.kill()
             proc.communicate()
             raise
     except OSError as e:
@@ -95,7 +99,28 @@ def gap_compute(group, operation, *, gap="gap", timeout=300, **parameters):
               f"{gap_literal(parameters)});;\n"
               'Print("INVGAL_JSON_BEGIN\\n"); IVJson(answer); '
               'Print("\\nINVGAL_JSON_END\\n"); QUIT_GAP(0);\n')
-    return run_json([str(gap), "-q", "-b", "-r", "--quitonbreak"], source=source, timeout=timeout)
+    return run_json([str(gap), "-q", "-b", "-r", "--quitonbreak"], source=source, timeout=timeout,
+                    start_new_session=os.environ.get("INVGAL_PYTHON_WORKER") != "1")
+
+
+def python_compute(group, operation, *, gap="gap", timeout=300, **parameters):
+    """Start a Python worker with a time limit for the full operation."""
+    checked_perms(group)
+    payload = dict(group=dict(name=group.name, latex=group.latex,
+                             degree=group.degree, order=group.order,
+                             description=group.description, generators=group.generators),
+                   operation=operation, parameters=dict(parameters, gap=gap, timeout=timeout))
+    root = str(Path(__file__).resolve().parent.parent)
+    env = dict(os.environ)
+    env["INVGAL_PYTHON_WORKER"] = "1"
+    env["PYTHONPATH"] = root + os.pathsep + env.get("PYTHONPATH", "")
+    answer = run_json([sys.executable, "-m", "invgal.python_worker"],
+                      payload=payload, timeout=timeout, env=env)
+    if not answer["success"]:
+        exceptions = {"ResourceLimit": ResourceLimit, "InvariantError": InvariantError,
+                      "ValueError": ValueError, "TypeError": TypeError, "OSError": OSError}
+        raise exceptions.get(answer["error_type"], InvariantError)(answer["error"])
+    return answer["result"]
 
 
 def abelian_group(invariants):

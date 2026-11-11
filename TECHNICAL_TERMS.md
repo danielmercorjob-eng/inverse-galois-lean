@@ -11,7 +11,7 @@ Code identifiers, commands, formulas, and file names keep their source spelling.
 | Algorithm | A finite procedure to calculate a result |
 | API | The functions and input fields that a caller can use |
 | Axiom audit | A check of the axioms in a Lean declaration |
-| Backend | The GAP process and its HAP operations |
+| Backend | A Python worker or a GAP process |
 | Betti number | The dimension of H^n(G,Fp) with trivial coefficients |
 | Bogomolov multiplier | The group B0(G) in the Lean definition |
 | Character | The character of a complex representation |
@@ -20,6 +20,13 @@ Code identifiers, commands, formulas, and file names keep their source spelling.
 | Commit | A recorded version of the project files |
 | Compilation | The compiler process for a source file |
 | Conjugacy class | A class of group elements under conjugation |
+| Bar complex | The normalized cochain complex for a finite group |
+| Detection kernel | The intersection of cohomology restriction kernels for a subgroup family |
+| Essential cohomology | The detection kernel for all proper subgroups |
+| Poincare series | The series with cohomology dimensions as coefficients |
+| Rational presentation | A reduced rational function with a proof of equality to the full series |
+| Quasipolynomial period | A period for the polynomial formulas on residue classes |
+| Integral period | The least positive degree with integral cohomology cyclic of order equal to the group order |
 | Declaration | A named Lean definition, instance, or theorem |
 | Group file | A JSON file that defines a permutation group |
 | Invariant factors | Cyclic factors in divisibility order |

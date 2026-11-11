@@ -22,19 +22,20 @@ def main():
     search = subprocess.check_output(["lake","env","printenv","LEAN_PATH"],cwd=project,text=True).strip()
     with tempfile.TemporaryDirectory(prefix="invgal-lean-") as tmp:
         env = dict(os.environ,LEAN_PATH=tmp+os.pathsep+search)
-        for module in ("GroupCohomologyInvariants","FiniteGroupInvariants"):
+        for module in ("GroupCohomologyInvariants","FiniteGroupInvariants","CohomologyInvariants"):
             subprocess.run([lean,"-DwarningAsError=true","-R",str(root),"-o",str(Path(tmp)/(module+".olean")),
                             str(root/(module+".lean"))],cwd=project,env=env,check=True)
             print(f"Checked {module}.lean",flush=True)
         if args.audit_axioms:
             declarations = []
             for module, namespace in (("GroupCohomologyInvariants", "FiniteGroupCohomology"),
-                                      ("FiniteGroupInvariants", "FiniteGroupInvariants")):
-                names = re.findall(r"^(?:def|abbrev|instance|theorem)\s+(\w+)",
+                                      ("FiniteGroupInvariants", "FiniteGroupInvariants"),
+                                      ("CohomologyInvariants", "FiniteGroupInvariants")):
+                names = re.findall(r"^(?:def|abbrev|instance|theorem|structure)\s+(\w+)",
                                    (root/(module+".lean")).read_text(), re.MULTILINE)
                 declarations.extend(namespace+"."+name for name in names)
             audit = Path(tmp)/"Audit.lean"
-            audit.write_text("import FiniteGroupInvariants\n" +
+            audit.write_text("import CohomologyInvariants\n" +
                              "\n".join("#print axioms "+name for name in declarations)+"\n")
             result = subprocess.run([lean,"-DwarningAsError=true","-R",tmp,str(audit)],
                                     cwd=project,env=env,check=True,capture_output=True,text=True)

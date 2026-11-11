@@ -1,4 +1,6 @@
-# Five finite-group invariants
+# First five finite-group invariants
+
+[COHOMOLOGY.md](COHOMOLOGY.md) gives five more cohomology invariants.
 
 The input to each function is a `GroupSpec` from `invgal.group.load_groups`.
 The program compares the group order with the `order` field before it calculates an invariant.

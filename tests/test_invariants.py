@@ -37,11 +37,13 @@ class InterfaceTest(unittest.TestCase):
         return subprocess.run([sys.executable, "-m", "invgal.invariants", *args],
                               cwd=ROOT, capture_output=True, text=True)
 
-    def test_lists_exactly_five_invariants(self):
+    def test_lists_exactly_ten_invariants(self):
         run = self.cli("--list")
         self.assertEqual(run.returncode, 0, run.stderr)
         self.assertEqual([line.split()[0] for line in run.stdout.splitlines()],
-                         ["betti", "schur_multiplier", "bogomolov_multiplier", "molien", "mckay"])
+                         ["integral_cohomology", "poincare_series", "zeros_and_poles",
+                          "detection_kernel", "periodicity", "betti", "schur_multiplier",
+                          "bogomolov_multiplier", "molien", "mckay"])
 
     def test_cli_requires_betti_prime(self):
         run = self.cli("--groups", "PSL27", "--invariants", "betti")
